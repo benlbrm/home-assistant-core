@@ -1,0 +1,14 @@
+{
+  "domain": "hottoh",
+  "name": "Hottoh",
+  "config_flow": true,
+  "documentation": "https://www.home-assistant.io/integrations/hottoh",
+  "requirements": ["crcmod"],
+  "ssdp": [],
+  "zeroconf": [],
+  "homekit": {},
+  "dependencies": [],
+  "codeowners": [
+    "@benlbrm"
+  ]
+}

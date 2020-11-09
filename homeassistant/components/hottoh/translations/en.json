@@ -1,0 +1,26 @@
+{
+    "title": "Hottoh",
+    "config": {
+        "abort": {
+            "no_devices_found": "No devices found on the network",
+            "single_instance_allowed": "Already configured. Only a single configuration possible."
+        },
+        "step": {
+            "init": {
+                "title": "Setup Hottoh stove",
+                "data": {
+                    "ip_address": "Ip Address of the device",
+                    "port": "Port to connect"
+                }
+            },
+            "confirm": {
+                "description": "Do you want to start set up?"
+            }
+        }
+    },
+    "error": {
+        "cannot_connect": "Cannot reach the device",
+        "ip_address": "Wrong ip address.",
+        "wrong_port_number": "Wrong value"
+    }
+}

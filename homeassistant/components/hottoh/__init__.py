@@ -10,11 +10,11 @@ from .const import DOMAIN
 
 # List of platforms to support. There should be a matching .py file for each,
 # eg <cover.py> and <sensor.py>
-PLATFORMS = ["cover", "sensor"]
+PLATFORMS = ["sensor"]
 
 
 async def async_setup(hass: HomeAssistant, config: dict):
-    """Set up the Hello World component."""
+    """Set up the Hottoh component."""
     # Ensure our name space for storing objects is a known type. A dict is
     # common/preferred as it allows a separate instance of your class for each
     # instance that has been created in the UI.
@@ -24,11 +24,14 @@ async def async_setup(hass: HomeAssistant, config: dict):
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Hello World from a config entry."""
+    """Set up HHottoh from a config entry."""
     # Store an instance of the "connecting" class that does the work of speaking
     # with your actual devices.
     # hass.data[DOMAIN][entry.entry_id] = hub.Hub(hass, entry.data["host"])
-
+    hass.data[DOMAIN][entry.entry_id] = Hottoh(
+        entry.data["ip_address"], entry.data["port"]
+    )
+    hass.data[DOMAIN][entry.entry_id].refreshData()
     # This creates each HA object for each platform your device requires.
     # It's done by calling the `async_setup_entry` function in each platform module.
     for component in PLATFORMS:

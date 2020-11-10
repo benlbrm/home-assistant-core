@@ -21,6 +21,7 @@ class Hottoh:
         self.Boiler = Boiler(self._boiler)
         self.Stove = Stove(self._stove)
         self.Chrono = Chrono(self._chrono)
+        self.refreshData()
 
     async def test_connection(self):
         """Test connectivity with the stove."""
@@ -60,6 +61,10 @@ class Hottoh:
         self._boiler = self._extractData(str(temp))
 
         s.close()
+
+        self.Boiler = Boiler(self._boiler)
+        self.Stove = Stove(self._stove)
+        self.Chrono = Chrono(self._chrono)
 
     def toJson(self):
         self.Stove = Stove(self._stove)

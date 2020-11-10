@@ -1,4 +1,5 @@
-from .const import *
+from .const import StoveRegisters
+import json
 
 
 class Stove:
@@ -6,69 +7,138 @@ class Stove:
         self._data = data
 
     def toJson(self):
-        j = "["
-        j += "{'name': 'page_index', 'unit': '', 'value:" + \
-            self.getPageIndex() + "},"
-        j += "{'name': 'manufacturer', 'unit': '', 'value:" + \
-            self.getManufacturer() + "},"
-        j += "{'name': 'is_bitmap_visible', 'unit': '', 'value:" + \
-            self.getIsBitmapVisible() + "},"
-        j += "{'name': 'is_valid', 'unit': '', 'value:" + \
-            self.getIsValid() + "},"
-        j += "{'name': 'type', 'unit': '', 'value:" + \
-            self.getStoveType() + "},"
-        j += "{'name': 'state', 'unit': '', 'value:" + \
-            self.getStoveState() + "},"
-        j += "{'name': 'is_on', 'unit': '', 'value:" + \
-            self.getStoveIsOn() + "},"
-        j += "{'name': 'eco_mode', 'unit': '', 'value:" + \
-            self.getEcoMode() + "},"
-        j += "{'name': 'chrono_mode', 'unit': '', 'value:" + \
-            self.getChronoMode() + "},"
-        j += "{'name': 'temperature_room_1', 'unit': '°C', 'value:" + \
-            self.getTemperatureRoom1() + "},"
-        j += "{'name': 'set_temperature_room_1', 'unit': '°C', 'value:" + \
-            self.getSetTemperatureRoom1() + "},"
-        j += "{'name': 'set_max_temperature_room_1', 'unit': '°C', 'value:" + \
-            self.getSetMaxTemperatureRoom1() + "},"
-        j += "{'name': 'set_min_temperature_room_1', 'unit': '°C', 'value:" + \
-            self.getSetMinTemperatureRoom1() + "},"
-        j += "{'name': 'temperature_room_2', 'unit': '°C', 'value:" + \
-            self.getTemperatureRoom2() + "},"
-        j += "{'name': 'set_temperature_room_2', 'unit': '°C', 'value:" + \
-            self.getSetTemperatureRoom2() + "},"
-        j += "{'name': 'set_max_temperature_room_2', 'unit': '°C', 'value:" + \
-            self.getSetMaxTemperatureRoom2() + "},"
-        j += "{'name': 'set_min_temperature_room_2', 'unit': '°C', 'value:" + \
-            self.getSetMinTemperatureRoom2() + "},"
-        j += "{'name': 'temperature_water', 'unit': '°C', 'value:" + \
-            self.getTemperatureWater() + "},"
-        j += "{'name': 'set_temperature_water', 'unit': '°C', 'value:" + \
-            self.getSetTemperatureWater() + "},"
-        j += "{'name': 'set_max_temperature_water', 'unit': '°C', 'value:" + \
-            self.getSetMaxTemperatureWater() + "},"
-        j += "{'name': 'set_min_temperature_water', 'unit': '°C', 'value:" + \
-            self.getSetMinTemperatureWater() + "},"
-        j += "{'name': 'power_level', 'unit': '%', 'value:" + \
-            self.getPowerLevel() + "},"
-        j += "{'name': 'set_power_level', 'unit': '%', 'value:" + \
-            self.getSetPowerLevel() + "},"
-        j += "{'name': 'set_max_power_level', 'unit': '%', 'value:" + \
-            self.getSetMaxPowerLevel() + "},"
-        j += "{'name': 'set_min_power_level', 'unit': '%', 'value:" + \
-            self.getSetMinPowerLevel() + "},"
-        j += "{'name': 'speed_fan_smoke', 'unit': 'rpm', 'value:" + \
-            self.getSpeedFanSmoke() + "},"
-        j += "{'name': 'speed_fan_1', 'unit': 'rpm', 'value:" + \
-            self.getSpeedFan1() + "},"
-        j += "{'name': 'speed_max_fan_1', 'unit': 'rpm', 'value:" + \
-            self.getSetMaxSpeedFan1() + "},"
-        j += "{'name': 'speed_fan_smoke', 'unit': 'rpm', 'value:" + \
-            self.getSpeedFanSmoke() + "},"
-        j += "{'name': 'speed_fan_smoke', 'unit': 'rpm', 'value:" + \
-            self.getSpeedFanSmoke() + "}"
-        j += "]"
-        return j
+        js = []
+        data = {"name": "page_index", "unit": "", "value": self.getPageIndex()}
+        js.append(data)
+        data = {"name": "manufacturer", "unit": "", "value": self.getManufacturer()}
+        js.append(data)
+        data = {
+            "name": "is_bitmap_visible",
+            "unit": "",
+            "value": self.getIsBitmapVisible(),
+        }
+        js.append(data)
+        data = {"name": "is_valid", "unit": "", "value": self.getIsValid()}
+        js.append(data)
+        data = {"name": "type", "unit": "", "value": self.getStoveType()}
+        js.append(data)
+        data = {"name": "state", "unit": "", "value": self.getStoveState()}
+        js.append(data)
+        data = {"name": "is_on", "unit": "", "value": self.getStoveIsOn()}
+        js.append(data)
+        data = {"name": "eco_mode", "unit": "", "value": self.getEcoMode()}
+        js.append(data)
+        data = {"name": "chrono_mode", "unit": "", "value": self.getChronoMode()}
+        js.append(data)
+        data = {
+            "name": "temperature_room_1",
+            "unit": "°C",
+            "value": self.getTemperatureRoom1(),
+        }
+        js.append(data)
+
+        return json.dumps(js)
+
+        # j += (
+        #     "{'name': 'set_temperature_room_1', 'unit': '°C', 'value:"
+        #     + self.getSetTemperatureRoom1()
+        #     + "},"
+        # )
+        # j += (
+        #     "{'name': 'set_max_temperature_room_1', 'unit': '°C', 'value:"
+        #     + self.getSetMaxTemperatureRoom1()
+        #     + "},"
+        # )
+        # j += (
+        #     "{'name': 'set_min_temperature_room_1', 'unit': '°C', 'value:"
+        #     + self.getSetMinTemperatureRoom1()
+        #     + "},"
+        # )
+        # j += (
+        #     "{'name': 'temperature_room_2', 'unit': '°C', 'value:"
+        #     + self.getTemperatureRoom2()
+        #     + "},"
+        # )
+        # j += (
+        #     "{'name': 'set_temperature_room_2', 'unit': '°C', 'value:"
+        #     + self.getSetTemperatureRoom2()
+        #     + "},"
+        # )
+        # j += (
+        #     "{'name': 'set_max_temperature_room_2', 'unit': '°C', 'value:"
+        #     + self.getSetMaxTemperatureRoom2()
+        #     + "},"
+        # )
+        # j += (
+        #     "{'name': 'set_min_temperature_room_2', 'unit': '°C', 'value:"
+        #     + self.getSetMinTemperatureRoom2()
+        #     + "},"
+        # )
+        # j += (
+        #     "{'name': 'temperature_water', 'unit': '°C', 'value:"
+        #     + self.getTemperatureWater()
+        #     + "},"
+        # )
+        # j += (
+        #     "{'name': 'set_temperature_water', 'unit': '°C', 'value:"
+        #     + self.getSetTemperatureWater()
+        #     + "},"
+        # )
+        # j += (
+        #     "{'name': 'set_max_temperature_water', 'unit': '°C', 'value:"
+        #     + self.getSetMaxTemperatureWater()
+        #     + "},"
+        # )
+        # j += (
+        #     "{'name': 'set_min_temperature_water', 'unit': '°C', 'value:"
+        #     + self.getSetMinTemperatureWater()
+        #     + "},"
+        # )
+        # j += (
+        #     "{'name': 'power_level', 'unit': '%', 'value:" + self.getPowerLevel() + "},"
+        # )
+        # j += (
+        #     "{'name': 'set_power_level', 'unit': '%', 'value:"
+        #     + self.getSetPowerLevel()
+        #     + "},"
+        # )
+        # j += (
+        #     "{'name': 'set_max_power_level', 'unit': '%', 'value:"
+        #     + self.getSetMaxPowerLevel()
+        #     + "},"
+        # )
+        # j += (
+        #     "{'name': 'set_min_power_level', 'unit': '%', 'value:"
+        #     + self.getSetMinPowerLevel()
+        #     + "},"
+        # )
+        # j += (
+        #     "{'name': 'speed_fan_smoke', 'unit': 'rpm', 'value:"
+        #     + self.getSpeedFanSmoke()
+        #     + "},"
+        # )
+        # j += (
+        #     "{'name': 'speed_fan_1', 'unit': 'rpm', 'value:"
+        #     + self.getSpeedFan1()
+        #     + "},"
+        # )
+        # j += (
+        #     "{'name': 'speed_max_fan_1', 'unit': 'rpm', 'value:"
+        #     + self.getSetMaxSpeedFan1()
+        #     + "},"
+        # )
+        # j += (
+        #     "{'name': 'speed_fan_smoke', 'unit': 'rpm', 'value:"
+        #     + self.getSpeedFanSmoke()
+        #     + "},"
+        # )
+        # j += (
+        #     "{'name': 'speed_fan_smoke', 'unit': 'rpm', 'value:"
+        #     + self.getSpeedFanSmoke()
+        #     + "}"
+        # )
+        # j += "]"
+        # return j.replace("'", '"')
 
     def getPageIndex(self):
         return self._data[StoveRegisters.INDEX_PAGE]

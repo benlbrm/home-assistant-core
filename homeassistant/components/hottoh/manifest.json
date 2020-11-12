@@ -3,7 +3,7 @@
   "name": "Hottoh",
   "config_flow": true,
   "documentation": "https://www.home-assistant.io/integrations/hottoh",
-  "requirements": ["crcmod"],
+  "requirements": ["crcmod", "get-mac"],
   "ssdp": [],
   "zeroconf": [],
   "homekit": {},

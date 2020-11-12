@@ -1,13 +1,22 @@
 """The Hottoh integration."""
 
 import asyncio
-
+import logging
+import json
+from datetime import timedelta
+from typing import Protocol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.update_coordinator import (
+    DataUpdateCoordinator,
+    UpdateFailed,
+    CoordinatorEntity,
+)
 
 from .pyhottoh import Hottoh
 from .const import DOMAIN
 
+_LOGGER = logging.getLogger(__name__)
 # List of platforms to support. There should be a matching .py file for each,
 # eg <cover.py> and <sensor.py>
 PLATFORMS = ["sensor"]
@@ -25,19 +34,37 @@ async def async_setup(hass: HomeAssistant, config: dict):
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up HHottoh from a config entry."""
-    # Store an instance of the "connecting" class that does the work of speaking
-    # with your actual devices.
-    # hass.data[DOMAIN][entry.entry_id] = hub.Hub(hass, entry.data["host"])
-    hass.data[DOMAIN][entry.entry_id] = Hottoh(
-        entry.data["ip_address"], entry.data["port"]
-    )
-    hass.data[DOMAIN][entry.entry_id].refreshData()
-    # This creates each HA object for each platform your device requires.
-    # It's done by calling the `async_setup_entry` function in each platform module.
+
     for component in PLATFORMS:
         hass.async_create_task(
             hass.config_entries.async_forward_entry_setup(entry, component)
         )
+
+    async def async_update_data():
+        """Fetch data from API endpoint.
+
+        This is the place to pre-process the data to lookup tables
+        so entities can quickly look up their data.
+        """
+        try:
+            hottoh = Hottoh(entry.data["ip_address"], entry.data["port"])
+            hottoh.refreshData()
+            _LOGGER.debug("Updating data from the stove")
+            _LOGGER.debug(hottoh.Stove.getData())
+            return hottoh.Stove.getData()
+
+        except Exception as err:
+            raise UpdateFailed(f"Error communicating with device: {err}")
+
+    coordinator = DataUpdateCoordinator(
+        hass,
+        _LOGGER,
+        name="hottoh",
+        update_method=async_update_data,
+        update_interval=timedelta(seconds=5),
+    )
+
+    hass.data[DOMAIN][entry.entry_id] = coordinator
 
     return True
 

@@ -8,6 +8,8 @@
 # battery), the unit_of_measurement should match what's expected.
 import logging
 import json
+import async_timeout
+from datetime import timedelta
 from homeassistant.const import (
     DEVICE_CLASS_TEMPERATURE,
     TEMP_CELSIUS,
@@ -15,7 +17,9 @@ from homeassistant.const import (
     STATE_UNKNOWN,
 )
 from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import (
+    CoordinatorEntity,
+)
 from .const import DOMAIN
 
 from homeassistant.const import ATTR_VOLTAGE
@@ -27,66 +31,20 @@ _LOGGER = logging.getLogger(__name__)
 # required.
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Add sensors for passed config_entry in HA."""
-    hottoh = hass.data[DOMAIN][config_entry.entry_id]
-    _LOGGER.debug(hottoh.Stove.toJson())
-    stovedata = json.loads(hottoh.Stove.toJson())
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+
+    # Fetch initial data so we have data when entities subscribe
+    await coordinator.async_refresh()
 
     entities = []
-    for info in stovedata:
-        entities.append(StoveSensor(hottoh, info))
+    for info in coordinator.data:
+        entities.append(StoveSensor(coordinator, info))
 
     _LOGGER.debug(entities)
     async_add_entities(entities, True)
-    # new_devices = []
-    # # for roller in hottoh.rollers:
-    # new_devices.append(StoveSensor(hottoh.Stove())
-    # # new_devices.append(IlluminanceSensor(roller))
-    # async_add_devices(new_devices)
 
 
-# This base class shows the common properties and methods for a sensor as used in this
-# example. See each sensor for further details about properties and methods that
-# have been overridden.
-class SensorBase(Entity):
-    """Base representation of a Hello World Sensor."""
-
-    # should_poll = False
-
-    def __init__(self, hottoh, info):
-        """Initialize the sensor."""
-        self._hottoh = hottoh
-        self._info = info
-
-    # To link this entity to the cover device, this property must return an
-    # identifiers value matching that used in the cover, but no other information such
-    # as name. If name is returned, this entity will then also become a device in the
-    # HA UI.
-    @property
-    def device_info(self):
-        """Return information to link this entity with the correct device."""
-        # TODO: Create a uid based on mac adress
-        # return {"identifiers": {(DOMAIN, self._hottoh.roller_id)}}
-        return {"identifiers": {(DOMAIN, "stove")}}
-
-    # This property is important to let HA know if this entity is online or not.
-    # If an entity is offline (return False), the UI will refelect this.
-    @property
-    def available(self) -> bool:
-        """Return True if roller and hub is available."""
-        return True
-
-    async def async_added_to_hass(self):
-        """Run when this Entity has been added to HA."""
-        # Sensors should also register callbacks to HA when their state changes
-        # self._roller.register_callback(self.async_write_ha_state)
-
-    async def async_will_remove_from_hass(self):
-        """Entity being removed from hass."""
-        # The opposite of async_added_to_hass. Remove any registered call backs here.
-        # self._roller.remove_callback(self.async_write_ha_state)
-
-
-class StoveSensor(SensorBase):
+class StoveSensor(CoordinatorEntity):
     """Representation of a Sensor."""
 
     # The class of this device. Note the value should come from the homeassistant.const
@@ -94,11 +52,10 @@ class StoveSensor(SensorBase):
     # https://developers.home-assistant.io/docs/core/entity/sensor
     device_class = DEVICE_CLASS_TEMPERATURE
 
-    def __init__(self, hottoh, info):
+    def __init__(self, coordinator, info):
         """Initialize the sensor."""
-        super().__init__(hottoh, info)
+        self.coordinator = coordinator
         self._state = STATE_UNKNOWN
-        self._hottoh
         self._info = info
 
     # As per the sensor, this must be a unique value within this domain. This is done
@@ -106,7 +63,7 @@ class StoveSensor(SensorBase):
     @property
     def unique_id(self):
         """Return Unique ID string."""
-        return "stove" + self._info["name"]
+        return "stove" + "AAAAA" + self._info["name"]
 
     # This property can return additional metadata about this device. Here it's
     # returning the voltage of the battery. The actual percentage is returned in
@@ -130,7 +87,12 @@ class StoveSensor(SensorBase):
     @property
     def state(self):
         """Return the state of the sensor."""
-        return self._info["value"]
+        for info in self.coordinator.data:
+            if info["name"] is self._info["name"]:
+                _LOGGER.debug(
+                    "name: {} - value: {}".format(self._info["name"], info["value"])
+                )
+                return info["value"]
 
     # The unit of measurement for this entity. As it's a DEVICE_CLASS_BATTERY, this
     # should be UNIT_PERCENTAGE. A number of units are supported by HA, for some
@@ -147,30 +109,18 @@ class StoveSensor(SensorBase):
         """Return the name of the sensor."""
         return self._info["name"]
 
-
-# This is another sensor, but more simple compared to the battery above. See the
-# comments above for how each field works.
-class IlluminanceSensor(SensorBase):
-    """Representation of a Sensor."""
-
-    device_class = DEVICE_CLASS_ILLUMINANCE
-
+    # To link this entity to the cover device, this property must return an
+    # identifiers value matching that used in the cover, but no other information such
+    # as name. If name is returned, this entity will then also become a device in the
+    # HA UI.
     @property
-    def unique_id(self):
-        """Return Unique ID string."""
-        return f"{self._roller.roller_id}_illuminance"
-
-    @property
-    def name(self):
-        """Return the name of the sensor."""
-        return f"{self._roller.name} Illuminance"
-
-    @property
-    def state(self):
-        """Return the state of the sensor."""
-        return self._roller.illuminance
-
-    @property
-    def unit_of_measurement(self):
-        """Return the unit of measurement."""
-        return "lx"
+    def device_info(self):
+        """Return information to link this entity with the correct device."""
+        # TODO: Create a uid based on mac adress
+        return {
+            "identifiers": {(DOMAIN, "stove")},
+            "name": "Hottoh",  # self._hottoh.name,
+            "sw_version": "1.0.0",  # self._hottoh.sw_version,
+            "model": "Drum",  # self._hottoh.model,
+            "manufacturer": "CMG",  # self._hottoh.manufacturer,
+        }

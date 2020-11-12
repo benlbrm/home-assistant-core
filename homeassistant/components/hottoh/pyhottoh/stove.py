@@ -1,4 +1,7 @@
-from .const import StoveRegisters
+from zeroconf import ip6_addresses_to_indexes
+from .const import StoveRegisters, StoveState
+from .request import Request
+import asyncio
 import json
 
 
@@ -6,22 +9,8 @@ class Stove:
     def __init__(self, data):
         self._data = data
 
-    def toJson(self):
+    def getData(self):
         js = []
-        data = {"name": "page_index", "unit": "", "value": self.getPageIndex()}
-        js.append(data)
-        data = {"name": "manufacturer", "unit": "", "value": self.getManufacturer()}
-        js.append(data)
-        data = {
-            "name": "is_bitmap_visible",
-            "unit": "",
-            "value": self.getIsBitmapVisible(),
-        }
-        js.append(data)
-        data = {"name": "is_valid", "unit": "", "value": self.getIsValid()}
-        js.append(data)
-        data = {"name": "type", "unit": "", "value": self.getStoveType()}
-        js.append(data)
         data = {"name": "state", "unit": "", "value": self.getStoveState()}
         js.append(data)
         data = {"name": "is_on", "unit": "", "value": self.getStoveIsOn()}
@@ -36,109 +25,36 @@ class Stove:
             "value": self.getTemperatureRoom1(),
         }
         js.append(data)
-
-        return json.dumps(js)
-
-        # j += (
-        #     "{'name': 'set_temperature_room_1', 'unit': '°C', 'value:"
-        #     + self.getSetTemperatureRoom1()
-        #     + "},"
-        # )
-        # j += (
-        #     "{'name': 'set_max_temperature_room_1', 'unit': '°C', 'value:"
-        #     + self.getSetMaxTemperatureRoom1()
-        #     + "},"
-        # )
-        # j += (
-        #     "{'name': 'set_min_temperature_room_1', 'unit': '°C', 'value:"
-        #     + self.getSetMinTemperatureRoom1()
-        #     + "},"
-        # )
-        # j += (
-        #     "{'name': 'temperature_room_2', 'unit': '°C', 'value:"
-        #     + self.getTemperatureRoom2()
-        #     + "},"
-        # )
-        # j += (
-        #     "{'name': 'set_temperature_room_2', 'unit': '°C', 'value:"
-        #     + self.getSetTemperatureRoom2()
-        #     + "},"
-        # )
-        # j += (
-        #     "{'name': 'set_max_temperature_room_2', 'unit': '°C', 'value:"
-        #     + self.getSetMaxTemperatureRoom2()
-        #     + "},"
-        # )
-        # j += (
-        #     "{'name': 'set_min_temperature_room_2', 'unit': '°C', 'value:"
-        #     + self.getSetMinTemperatureRoom2()
-        #     + "},"
-        # )
-        # j += (
-        #     "{'name': 'temperature_water', 'unit': '°C', 'value:"
-        #     + self.getTemperatureWater()
-        #     + "},"
-        # )
-        # j += (
-        #     "{'name': 'set_temperature_water', 'unit': '°C', 'value:"
-        #     + self.getSetTemperatureWater()
-        #     + "},"
-        # )
-        # j += (
-        #     "{'name': 'set_max_temperature_water', 'unit': '°C', 'value:"
-        #     + self.getSetMaxTemperatureWater()
-        #     + "},"
-        # )
-        # j += (
-        #     "{'name': 'set_min_temperature_water', 'unit': '°C', 'value:"
-        #     + self.getSetMinTemperatureWater()
-        #     + "},"
-        # )
-        # j += (
-        #     "{'name': 'power_level', 'unit': '%', 'value:" + self.getPowerLevel() + "},"
-        # )
-        # j += (
-        #     "{'name': 'set_power_level', 'unit': '%', 'value:"
-        #     + self.getSetPowerLevel()
-        #     + "},"
-        # )
-        # j += (
-        #     "{'name': 'set_max_power_level', 'unit': '%', 'value:"
-        #     + self.getSetMaxPowerLevel()
-        #     + "},"
-        # )
-        # j += (
-        #     "{'name': 'set_min_power_level', 'unit': '%', 'value:"
-        #     + self.getSetMinPowerLevel()
-        #     + "},"
-        # )
-        # j += (
-        #     "{'name': 'speed_fan_smoke', 'unit': 'rpm', 'value:"
-        #     + self.getSpeedFanSmoke()
-        #     + "},"
-        # )
-        # j += (
-        #     "{'name': 'speed_fan_1', 'unit': 'rpm', 'value:"
-        #     + self.getSpeedFan1()
-        #     + "},"
-        # )
-        # j += (
-        #     "{'name': 'speed_max_fan_1', 'unit': 'rpm', 'value:"
-        #     + self.getSetMaxSpeedFan1()
-        #     + "},"
-        # )
-        # j += (
-        #     "{'name': 'speed_fan_smoke', 'unit': 'rpm', 'value:"
-        #     + self.getSpeedFanSmoke()
-        #     + "},"
-        # )
-        # j += (
-        #     "{'name': 'speed_fan_smoke', 'unit': 'rpm', 'value:"
-        #     + self.getSpeedFanSmoke()
-        #     + "}"
-        # )
-        # j += "]"
-        # return j.replace("'", '"')
+        data = {
+            "name": "set_temperature_room_1",
+            "unit": "°C",
+            "value": self.getSetTemperatureRoom1(),
+        }
+        js.append(data)
+        data = {
+            "name": "smoke_temperature",
+            "unit": "°C",
+            "value": self.getSmokeTemperature(),
+        }
+        js.append(data)
+        data = {"name": "power_level", "unit": "%", "value": self.getPowerLevel()}
+        js.append(data)
+        data = {
+            "name": "set_power_level",
+            "unit": "%",
+            "value": self.getSetPowerLevel(),
+        }
+        js.append(data)
+        data = {
+            "name": "speed_fan_smoke",
+            "unit": "rpm",
+            "value": self.getSpeedFanSmoke(),
+        }
+        js.append(data)
+        # data = {"name": "speed_fan_1", "unit": "rpm", "value": self.getSpeedFan1()}
+        # js.append(data)
+        # return json.dumps(js)
+        return js
 
     def getPageIndex(self):
         return self._data[StoveRegisters.INDEX_PAGE]
@@ -156,16 +72,93 @@ class Stove:
         return self._data[StoveRegisters.INDEX_STOVE_TYPE]
 
     def getStoveState(self):
-        return self._data[StoveRegisters.INDEX_STOVE_STATE]
+        if StoveState.STATUS_OFF == int(self._data[StoveRegisters.INDEX_STOVE_STATE]):
+            return "off"
+        if StoveState.STATUS_STARTING_1 == int(
+            self._data[StoveRegisters.INDEX_STOVE_STATE]
+        ):
+            return "starting_1"
+        if StoveState.STATUS_STARTING_2 == int(
+            self._data[StoveRegisters.INDEX_STOVE_STATE]
+        ):
+            return "starting_2"
+        if StoveState.STATUS_STARTING_3 == int(
+            self._data[StoveRegisters.INDEX_STOVE_STATE]
+        ):
+            return "starting_3"
+        if StoveState.STATUS_STARTING_4 == int(
+            self._data[StoveRegisters.INDEX_STOVE_STATE]
+        ):
+            return "starting_4"
+        if StoveState.STATUS_STARTING_5 == int(
+            self._data[StoveRegisters.INDEX_STOVE_STATE]
+        ):
+            return "starting_5"
+        if StoveState.STATUS_STARTING_6 == int(
+            self._data[StoveRegisters.INDEX_STOVE_STATE]
+        ):
+            return "starting_6"
+        if StoveState.STATUS_STARTING_7 == int(
+            self._data[StoveRegisters.INDEX_STOVE_STATE]
+        ):
+            return "starting_7"
+        if StoveState.STATUS_POWER == int(self._data[StoveRegisters.INDEX_STOVE_STATE]):
+            return "power"
+        if StoveState.STATUS_STOPPING_1 == int(
+            self._data[StoveRegisters.INDEX_STOVE_STATE]
+        ):
+            return "stopping_1"
+        if StoveState.STATUS_STOPPING_2 == int(
+            self._data[StoveRegisters.INDEX_STOVE_STATE]
+        ):
+            return "stopping_2"
+        if StoveState.STATUS_ECO_STOP_1 == int(
+            self._data[StoveRegisters.INDEX_STOVE_STATE]
+        ):
+            return "eco_stop_1"
+        if StoveState.STATUS_ECO_STOP_2 == int(
+            self._data[StoveRegisters.INDEX_STOVE_STATE]
+        ):
+            return "eco_stop_2"
+        if StoveState.STATUS_ECO_STOP_3 == int(
+            self._data[StoveRegisters.INDEX_STOVE_STATE]
+        ):
+            return "eco_stop_3"
+        if StoveState.STATUS_LOW_PELLET == int(
+            self._data[StoveRegisters.INDEX_STOVE_STATE]
+        ):
+            return "low_pellet"
+        if StoveState.STATUS_END_PELLET == int(
+            self._data[StoveRegisters.INDEX_STOVE_STATE]
+        ):
+            return "end_pellet"
+        if StoveState.STATUS_BLACK_OUT == int(
+            self._data[StoveRegisters.INDEX_STOVE_STATE]
+        ):
+            return "black_out"
+        if (
+            StoveState.STATUS_ANTI_FREEZE
+            == self._data[StoveRegisters.INDEX_STOVE_STATE]
+        ):
+            return "anti_freeze"
 
     def getStoveIsOn(self):
-        return self._data[StoveRegisters.INDEX_STOVE_ON]
+        if self._data[StoveRegisters.INDEX_STOVE_ON] == "1":
+            return "on"
+        else:
+            return "off"
 
     def getEcoMode(self):
-        return self._data[StoveRegisters.INDEX_ECO_MODE]
+        if self._data[StoveRegisters.INDEX_ECO_MODE] == "1":
+            return "on"
+        else:
+            return "off"
 
     def getChronoMode(self):
-        return self._data[StoveRegisters.INDEX_TIMER_ON]
+        if self._data[StoveRegisters.INDEX_TIMER_ON] == "1":
+            return "on"
+        else:
+            return "off"
 
     def getTemperatureRoom1(self):
         return str(int(self._data[StoveRegisters.INDEX_AMBIENT_T1]) / 10)

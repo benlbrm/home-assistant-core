@@ -2,6 +2,7 @@
 
 import asyncio
 import socket
+import getmac
 from .request import Request
 from .const import *
 from .stove import Stove
@@ -21,7 +22,12 @@ class Hottoh:
         self.Boiler = Boiler(self._boiler)
         self.Stove = Stove(self._stove)
         self.Chrono = Chrono(self._chrono)
+        self.mac = getmac.get_mac_address(ip=self.ip)
         self.refreshData()
+        self.name = "Hottoh"
+        self.sw_version = "1.0.0"
+        self.manufacturer = "CMG"
+        self.model = "Drum"
 
     async def test_connection(self):
         """Test connectivity with the stove."""
@@ -36,6 +42,12 @@ class Hottoh:
             return True
         else:
             return False
+
+    def getMacAddress(self):
+        if self.mac != None:
+            return self.mac
+        else:
+            return ""
 
     def refreshData(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -66,14 +78,14 @@ class Hottoh:
         self.Stove = Stove(self._stove)
         self.Chrono = Chrono(self._chrono)
 
-    def toJson(self):
-        self.Stove = Stove(self._stove)
-        self.Chrono = Chrono(self._chrono)
-        self.Boiler = Boiler(self._boiler)
-        j = "'timestamp': '', 'stove': {1}, 'chrono': {2}, 'boiler': {2}".format(
-            self.Stove.toJson(), self.Chrono.toJson(), self.Boiler.toJson()
-        )
-        return "{" + j + "}"
+    # def toJson(self):
+    #     self.Stove = Stove(self._stove)
+    #     self.Chrono = Chrono(self._chrono)
+    #     self.Boiler = Boiler(self._boiler)
+    #     j = "'timestamp': '', 'stove': {1}, 'chrono': {2}, 'boiler': {2}".format(
+    #         self.Stove.toJson(), self.Chrono.toJson(), self.Boiler.toJson()
+    #     )
+    #     return "{" + j + "}"
 
     def _extractData(self, data):
         # Split data to an array

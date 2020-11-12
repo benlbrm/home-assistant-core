@@ -85,6 +85,7 @@ FLOWS = [
     "homekit",
     "homekit_controller",
     "homematicip_cloud",
+    "hottoh",
     "huawei_lte",
     "hue",
     "hunterdouglas_powerview",

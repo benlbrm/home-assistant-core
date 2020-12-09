@@ -13,20 +13,15 @@ from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
 )
 
-from .pyhottoh import Hottoh
+from .pyhottoh import Stove
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
-# List of platforms to support. There should be a matching .py file for each,
-# eg <cover.py> and <sensor.py>
 PLATFORMS = ["sensor"]
 
 
 async def async_setup(hass: HomeAssistant, config: dict):
     """Set up the Hottoh component."""
-    # Ensure our name space for storing objects is a known type. A dict is
-    # common/preferred as it allows a separate instance of your class for each
-    # instance that has been created in the UI.
     hass.data.setdefault(DOMAIN, {})
 
     return True
@@ -41,17 +36,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
 
     async def async_update_data():
-        """Fetch data from API endpoint.
-
-        This is the place to pre-process the data to lookup tables
-        so entities can quickly look up their data.
-        """
+        """Fetch data from API endpoint."""
         try:
-            hottoh = Hottoh(entry.data["ip_address"], entry.data["port"])
-            hottoh.refreshData()
+            hottoh = Stove(entry.data["ip_address"], entry.data["port"])
             _LOGGER.debug("Updating data from the stove")
-            _LOGGER.debug(hottoh.Stove.getData())
-            return hottoh.Stove.getData()
+            data = await hottoh.refresh()
+            _LOGGER.debug(data)
+            return data
 
         except Exception as err:
             raise UpdateFailed(f"Error communicating with device: {err}")
@@ -61,7 +52,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER,
         name="hottoh",
         update_method=async_update_data,
-        update_interval=timedelta(seconds=5),
+        update_interval=timedelta(seconds=15),
     )
 
     hass.data[DOMAIN][entry.entry_id] = coordinator
@@ -71,9 +62,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Unload a config entry."""
-    # This is called when an entry/configured device is to be removed. The class
-    # needs to unload itself, and remove callbacks. See the classes for further
-    # details
     unload_ok = all(
         await asyncio.gather(
             *[

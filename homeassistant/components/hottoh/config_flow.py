@@ -1,75 +1,64 @@
 """Config flow for Hottoh."""
 import logging
-
+from functools import partial
 import voluptuous as vol
+from getmac import get_mac_address
 
 from homeassistant import config_entries, core, exceptions
+from homeassistant.const import CONF_IP_ADDRESS, CONF_MAC, CONF_PORT
+import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.device_registry import format_mac
 
-from .const import DOMAIN  # pylint:disable=unused-import
-from .pyhottoh import Hottoh
+from .const import (
+    DOMAIN,
+    HOTTOH_DEFAULT_IP_ADDRESS,
+    HOTTOH_DEFAULT_PORT,
+)  # pylint:disable=unused-import
+from .pyhottoh import Stove
 
 _LOGGER = logging.getLogger(__name__)
 
-# This is the schema that used to display the UI to the user. This simple
-# schema has a single required host field, but it could include a number of fields
-# such as username, password etc. See other components in the HA core code for
-# further examples.
-# Note the input displayed to the user will be translated. See the
-# translations/<lang>.json file and strings.json. See here for further information:
-# https://developers.home-assistant.io/docs/config_entries_config_flow_handler/#translations
-# At the time of writing I found the translations created by the scaffold didn't
-# quite work as documented and always gave me the "Lokalise key references" string
-# (in square brackets), rather than the actual translated value. I did not attempt to
-# figure this out or look further into it.
-DATA_SCHEMA = vol.Schema({("ip_address"): str}, {("port"): int})
 DATA_SCHEMA = vol.Schema(
     {
-        vol.Required("ip_address", default="192.168.1.56"): str,
-        vol.Required("port", default=5001): int,
+        vol.Required(CONF_IP_ADDRESS, default=HOTTOH_DEFAULT_IP_ADDRESS): cv.string,
+        vol.Optional(CONF_MAC): cv.string,
+        vol.Required(CONF_PORT, default=HOTTOH_DEFAULT_PORT): int,
     }
 )
 
 
 async def validate_input(hass: core.HomeAssistant, data: dict):
-    """Validate the user input allows us to connect.
-    Data has the keys from DATA_SCHEMA with values provided by the user.
-    """
-    # Validate the data can be used to set up a connection.
+    """Validate the user input allows us to connect."""
 
-    # This is a simple example to show an error in the UI for a short hostname
-    # The exceptions are defined at the end of this file, and are used in the
-    # `async_step_user` method below.
-    if len(data["ip_address"]) < 3:
-        raise InvalidIp
-    if data["port"] < 1:
-        raise InvalidPort
-
-    # hub = Hub(hass, data["host"])
-    hottoh = Hottoh(data["ip_address"], data["port"])
-    # The dummy hub provides a `test_connection` method to ensure it's working
-    # as expected
+    hottoh = Stove(data[CONF_IP_ADDRESS], data[CONF_PORT])
     result = await hottoh.test_connection()
     if not result:
-        # If there is an error, raise an exception to notify HA that there was a
-        # problem. The UI will also show there was a problem
         raise CannotConnect
 
-    # If your PyPI package is not built with async, pass your methods
-    # to the executor:
-    # await hass.async_add_executor_job(
-    #     your_validate_func, data["username"], data["password"]
-    # )
+    # data[CONF_MAC] = await async_get_mac(hass, data[CONF_IP_ADDRESS])
 
-    # If you cannot connect:
-    # throw CannotConnect
-    # If the authentication is wrong:
-    # InvalidAuth
+    return {"title": data[CONF_IP_ADDRESS]}
 
-    # Return info that you want to store in the config entry.
-    # "Title" is what is displayed to the user for this hub device
-    # It is stored internally in HA as part of the device config.
-    # See `async_step_user` below for how this is used
-    return {"title": data["ip_address"]}
+
+async def async_get_mac(hass: core.HomeAssistant, host):
+    """Get the mac address of the hottoh module."""
+    try:
+        mac_address = await hass.async_add_executor_job(
+            partial(get_mac_address, **{"ip": host})
+        )
+        if not mac_address:
+            mac_address = await hass.async_add_executor_job(
+                partial(get_mac_address, **{"hostname": host})
+            )
+    except Exception as err:  # pylint: disable=broad-except
+        _LOGGER.error("Unable to get mac address: %s", err)
+        mac_address = None
+
+    if mac_address is not None:
+        mac_address = format_mac(mac_address)
+    else:
+        raise CannotGetMacAddress
+    return mac_address
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -94,7 +83,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             try:
                 info = await validate_input(self.hass, user_input)
-
                 return self.async_create_entry(title=info["title"], data=user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
@@ -126,3 +114,7 @@ class InvalidIp(exceptions.HomeAssistantError):
 
 class InvalidPort(exceptions.HomeAssistantError):
     """Error to indicate there is an invalid connection port."""
+
+
+class CannotGetMacAddress(exceptions.HomeAssistantError):
+    """Error cannot get mac address of the device"""

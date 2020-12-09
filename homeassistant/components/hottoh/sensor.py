@@ -12,8 +12,9 @@ import async_timeout
 from datetime import timedelta
 from homeassistant.const import (
     DEVICE_CLASS_TEMPERATURE,
+    DEVICE_CLASS_POWER,
     TEMP_CELSIUS,
-    DEVICE_CLASS_ILLUMINANCE,
+    PERCENTAGE,
     STATE_UNKNOWN,
 )
 from homeassistant.helpers.entity import Entity
@@ -25,20 +26,24 @@ from .const import DOMAIN
 from homeassistant.const import ATTR_VOLTAGE
 
 _LOGGER = logging.getLogger(__name__)
-# See cover.py for more details.
-# Note how both entities for each roller sensor (battry and illuminance) are added at
-# the same time to the same list. This way only a single async_add_devices call is
-# required.
+
+
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Add sensors for passed config_entry in HA."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
 
-    # Fetch initial data so we have data when entities subscribe
     await coordinator.async_refresh()
 
     entities = []
-    for info in coordinator.data:
-        entities.append(StoveSensor(coordinator, info))
+
+    for data in coordinator.data:
+        if data["item"] == "info":
+            _LOGGER.debug(f"info: {data['value']}")
+        if data["item"] == "data":
+            _LOGGER.debug(f"data: {data['value']}")
+            for info in data["value"]:
+                _LOGGER.debug(info)
+                entities.append(StoveSensor(coordinator, info))
 
     _LOGGER.debug(entities)
     async_add_entities(entities, True)
@@ -50,7 +55,6 @@ class StoveSensor(CoordinatorEntity):
     # The class of this device. Note the value should come from the homeassistant.const
     # module. More information on the available devices classes can be seen here:
     # https://developers.home-assistant.io/docs/core/entity/sensor
-    device_class = DEVICE_CLASS_TEMPERATURE
 
     def __init__(self, coordinator, info):
         """Initialize the sensor."""
@@ -58,12 +62,36 @@ class StoveSensor(CoordinatorEntity):
         self._state = STATE_UNKNOWN
         self._info = info
 
+    @property
+    def device_class(self):
+        if self._info["unit"] is TEMP_CELSIUS:
+            return DEVICE_CLASS_TEMPERATURE
+        elif self._info["unit"] is PERCENTAGE:
+            return DEVICE_CLASS_POWER
+        else:
+            return None
+
+    @property
+    def icon(self):
+        if self._info["unit"] == "rpm":
+            return "mdi:fan"
+        if self._info["name"] == "state":
+            return "mdi:fire"
+        else:
+            return None
+
     # As per the sensor, this must be a unique value within this domain. This is done
     # by using the device ID, and appending "_battery"
     @property
     def unique_id(self):
         """Return Unique ID string."""
-        return "stove" + "AAAAA" + self._info["name"]
+        mac = ""
+        for data in self.coordinator.data:
+            if data["item"] == "info":
+                for info in data["value"]:
+                    if info["name"] == "mac":
+                        mac = info["value"]
+        return DOMAIN + f".{mac}." + self._info["name"]
 
     # This property can return additional metadata about this device. Here it's
     # returning the voltage of the battery. The actual percentage is returned in
@@ -87,17 +115,17 @@ class StoveSensor(CoordinatorEntity):
     @property
     def state(self):
         """Return the state of the sensor."""
-        for info in self.coordinator.data:
-            if info["name"] is self._info["name"]:
-                _LOGGER.debug(
-                    "name: {} - value: {}".format(self._info["name"], info["value"])
-                )
-                return info["value"]
+        for data in self.coordinator.data:
+            if data["item"] == "data":
+                for info in data["value"]:
+                    if info["name"] is self._info["name"]:
+                        _LOGGER.debug(
+                            "name: {} - value: {}".format(
+                                self._info["name"], info["value"]
+                            )
+                        )
+                        return info["value"]
 
-    # The unit of measurement for this entity. As it's a DEVICE_CLASS_BATTERY, this
-    # should be UNIT_PERCENTAGE. A number of units are supported by HA, for some
-    # examples, see:
-    # https://developers.home-assistant.io/docs/core/entity/sensor#available-device-classes
     @property
     def unit_of_measurement(self):
         """Return the unit of measurement."""
@@ -116,11 +144,26 @@ class StoveSensor(CoordinatorEntity):
     @property
     def device_info(self):
         """Return information to link this entity with the correct device."""
-        # TODO: Create a uid based on mac adress
+        fw = ""
+        model = ""
+        manufacturer = ""
+        mac = ""
+        for data in self.coordinator.data:
+            if data["item"] == "info":
+                for info in data["value"]:
+                    if info["name"] == "fw":
+                        fw = info["value"]
+                    if info["name"] == "model":
+                        model = info["value"]
+                    if info["name"] == "manufacturer":
+                        manufacturer = info["value"]
+                    if info["name"] == "mac":
+                        mac = info["value"]
         return {
-            "identifiers": {(DOMAIN, "stove")},
+            "identifiers": {(DOMAIN, mac)},
             "name": "Hottoh",  # self._hottoh.name,
-            "sw_version": "1.0.0",  # self._hottoh.sw_version,
-            "model": "Drum",  # self._hottoh.model,
-            "manufacturer": "CMG",  # self._hottoh.manufacturer,
+            "sw_version": fw,  # self._hottoh.sw_version,
+            "model": model,  # self._hottoh.model,
+            "manufacturer": manufacturer,  # self._hottoh.manufacturer,
+            # "via_device": (DOMAIN, mac),
         }

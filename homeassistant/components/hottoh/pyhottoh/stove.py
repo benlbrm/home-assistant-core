@@ -3,119 +3,169 @@ from .const import StoveRegisters, StoveState
 from .request import Request
 import asyncio
 import json
+from .hottoh import Hottoh
 
 
-class Stove:
-    def __init__(self, data):
-        self._data = data
+class Stove(Hottoh):
+    def __init__(self, ip="192.168.1.56", port=5001):
+        super().__init__(ip, port)
+        self._data = None
+        self._info = None
 
-    def getData(self):
+    async def refresh(self):
+        """Fetch data from the stove"""
+        try:
+            # Get info data from the stove
+            self._info = await self._fetch("INF", [""])
+
+            # Get working data from the stove
+            self._data = await self._fetch("DAT", ["0"])
+
+            # Get Chrono data from the stove
+            self._chrono = await self._fetch("DAT", ["2"])
+
+            return [
+                {"item": "info", "value": self._formatInfo()},
+                {"item": "data", "value": self._formatData()},
+            ]
+        except:
+            raise
+
+    def _formatData(self):
         js = []
-        data = {"name": "state", "unit": "", "value": self.getStoveState()}
+        data = {"name": "state", "unit": "", "value": self._getStoveState()}
         js.append(data)
-        data = {"name": "is_on", "unit": "", "value": self.getStoveIsOn()}
+        data = {"name": "is_on", "unit": "", "value": self._getStoveIsOn()}
         js.append(data)
-        data = {"name": "eco_mode", "unit": "", "value": self.getEcoMode()}
+        data = {"name": "eco_mode", "unit": "", "value": self._getEcoMode()}
         js.append(data)
-        data = {"name": "chrono_mode", "unit": "", "value": self.getChronoMode()}
+        data = {"name": "chrono_mode", "unit": "", "value": self._getChronoMode()}
         js.append(data)
         data = {
             "name": "temperature_room_1",
             "unit": "°C",
-            "value": self.getTemperatureRoom1(),
+            "value": self._getTemperatureRoom1(),
         }
         js.append(data)
         data = {
             "name": "set_temperature_room_1",
             "unit": "°C",
-            "value": self.getSetTemperatureRoom1(),
+            "value": self._getSetTemperatureRoom1(),
         }
         js.append(data)
         data = {
             "name": "smoke_temperature",
             "unit": "°C",
-            "value": self.getSmokeTemperature(),
+            "value": self._getSmokeTemperature(),
         }
         js.append(data)
-        data = {"name": "power_level", "unit": "%", "value": self.getPowerLevel()}
+        data = {"name": "power_level", "unit": "%", "value": self._getPowerLevel()}
         js.append(data)
         data = {
             "name": "set_power_level",
             "unit": "%",
-            "value": self.getSetPowerLevel(),
+            "value": self._getSetPowerLevel(),
         }
         js.append(data)
         data = {
             "name": "speed_fan_smoke",
             "unit": "rpm",
-            "value": self.getSpeedFanSmoke(),
+            "value": self._getSpeedFanSmoke(),
         }
         js.append(data)
-        # data = {"name": "speed_fan_1", "unit": "rpm", "value": self.getSpeedFan1()}
+        # data = {"name": "speed_fan_1", "unit": "rpm", "value": self._getSpeedFan1()}
         # js.append(data)
         # return json.dumps(js)
         return js
 
-    def getPageIndex(self):
+    def _formatInfo(self):
+        js = []
+        data = {"name": "fw", "unit": "", "value": self._getFirmwareVersion()}
+        js.append(data)
+
+        data = {"name": "wifi", "unit": "", "value": self._getWifiSignal()}
+        js.append(data)
+
+        data = {"name": "model", "unit": "", "value": self._getStoveType()}
+        js.append(data)
+
+        data = {"name": "manufacturer", "unit": "", "value": self._getManufacturer()}
+        js.append(data)
+
+        data = {"name": "mac", "unit": "", "value": self._getMac()}
+        js.append(data)
+
+        return js
+
+    def _getFirmwareVersion(self):
+        return self._info[StoveRegisters.INDEX_FW]
+
+    def _getWifiSignal(self):
+        return self._info[StoveRegisters.INDEX_WIFI]
+
+    def _getPageIndex(self):
         return self._data[StoveRegisters.INDEX_PAGE]
 
-    def getManufacturer(self):
-        return self._data[StoveRegisters.INDEX_MANUFACTURER]
+    def _getManufacturer(self):
+        if self._data[StoveRegisters.INDEX_MANUFACTURER] == "9":
+            return "CMG"
+        else:
+            return str(self._data[StoveRegisters.INDEX_MANUFACTURER])
 
-    def getIsBitmapVisible(self):
+    def _getIsBitmapVisible(self):
         return self._data[StoveRegisters.INDEX_BITMAP_VISIBLE]
 
-    def getIsValid(self):
+    def _getIsValid(self):
         return self._data[StoveRegisters.INDEX_VALID]
 
-    def getStoveType(self):
-        return self._data[StoveRegisters.INDEX_STOVE_TYPE]
+    def _getStoveType(self):
+        return str(self._data[StoveRegisters.INDEX_STOVE_TYPE])
 
-    def getStoveState(self):
+    def _getStoveState(self):
         if StoveState.STATUS_OFF == int(self._data[StoveRegisters.INDEX_STOVE_STATE]):
-            return "off"
+            return "off_switched_off"
         if StoveState.STATUS_STARTING_1 == int(
             self._data[StoveRegisters.INDEX_STOVE_STATE]
         ):
-            return "starting_1"
+            return "starting_1_check"
         if StoveState.STATUS_STARTING_2 == int(
             self._data[StoveRegisters.INDEX_STOVE_STATE]
         ):
-            return "starting_2"
+            return "starting_2_clean_all"
         if StoveState.STATUS_STARTING_3 == int(
             self._data[StoveRegisters.INDEX_STOVE_STATE]
         ):
-            return "starting_3"
+            return "starting_3_loading"
         if StoveState.STATUS_STARTING_4 == int(
             self._data[StoveRegisters.INDEX_STOVE_STATE]
         ):
-            return "starting_4"
+            return "starting_4_loading"
         if StoveState.STATUS_STARTING_5 == int(
             self._data[StoveRegisters.INDEX_STOVE_STATE]
         ):
-            return "starting_5"
+            return "starting_5_waiting"
         if StoveState.STATUS_STARTING_6 == int(
             self._data[StoveRegisters.INDEX_STOVE_STATE]
         ):
-            return "starting_6"
+            return "starting_6_ignition"
         if StoveState.STATUS_STARTING_7 == int(
             self._data[StoveRegisters.INDEX_STOVE_STATE]
         ):
-            return "starting_7"
+            return "starting_7_stabilization"
         if StoveState.STATUS_POWER == int(self._data[StoveRegisters.INDEX_STOVE_STATE]):
             return "power"
         if StoveState.STATUS_STOPPING_1 == int(
             self._data[StoveRegisters.INDEX_STOVE_STATE]
         ):
-            return "stopping_1"
+            return "stopping_1_wait_standby"
         if StoveState.STATUS_STOPPING_2 == int(
             self._data[StoveRegisters.INDEX_STOVE_STATE]
         ):
-            return "stopping_2"
+            return "stopping_2_wait_standby"
         if StoveState.STATUS_ECO_STOP_1 == int(
             self._data[StoveRegisters.INDEX_STOVE_STATE]
         ):
-            return "eco_stop_1"
+            return "eco_stop_1_standby"
         if StoveState.STATUS_ECO_STOP_2 == int(
             self._data[StoveRegisters.INDEX_STOVE_STATE]
         ):
@@ -142,101 +192,101 @@ class Stove:
         ):
             return "anti_freeze"
 
-    def getStoveIsOn(self):
+    def _getStoveIsOn(self):
         if self._data[StoveRegisters.INDEX_STOVE_ON] == "1":
             return "on"
         else:
             return "off"
 
-    def getEcoMode(self):
+    def _getEcoMode(self):
         if self._data[StoveRegisters.INDEX_ECO_MODE] == "1":
             return "on"
         else:
             return "off"
 
-    def getChronoMode(self):
+    def _getChronoMode(self):
         if self._data[StoveRegisters.INDEX_TIMER_ON] == "1":
             return "on"
         else:
             return "off"
 
-    def getTemperatureRoom1(self):
+    def _getTemperatureRoom1(self):
         return str(int(self._data[StoveRegisters.INDEX_AMBIENT_T1]) / 10)
 
-    def getSetTemperatureRoom1(self):
+    def _getSetTemperatureRoom1(self):
         return str(int(self._data[StoveRegisters.INDEX_AMBIENT_T1_SET]) / 10)
 
-    def getSetMaxTemperatureRoom1(self):
+    def _getSetMaxTemperatureRoom1(self):
         return str(int(self._data[StoveRegisters.INDEX_AMBIENT_T1_SET_MAX]) / 10)
 
-    def getSetMinTemperatureRoom1(self):
+    def _getSetMinTemperatureRoom1(self):
         return str(int(self._data[StoveRegisters.INDEX_AMBIENT_T1_SET_MIN]) / 10)
 
-    def getTemperatureRoom2(self):
+    def _getTemperatureRoom2(self):
         return str(int(self._data[StoveRegisters.INDEX_AMBIENT_T2]) / 10)
 
-    def getSetTemperatureRoom2(self):
+    def _getSetTemperatureRoom2(self):
         return str(int(self._data[StoveRegisters.INDEX_AMBIENT_T2_SET]) / 10)
 
-    def getSetMaxTemperatureRoom2(self):
+    def _getSetMaxTemperatureRoom2(self):
         return str(int(self._data[StoveRegisters.INDEX_AMBIENT_T2_SET_MAX]) / 10)
 
-    def getSetMinTemperatureRoom2(self):
+    def _getSetMinTemperatureRoom2(self):
         return str(int(self._data[StoveRegisters.INDEX_AMBIENT_T2_SET_MIN]) / 10)
 
-    def getTemperatureWater(self):
+    def _getTemperatureWater(self):
         return str(int(self._data[StoveRegisters.INDEX_WATER]) / 10)
 
-    def getSetTemperatureWater(self):
+    def _getSetTemperatureWater(self):
         return str(int(self._data[StoveRegisters.INDEX_WATER_SET]) / 10)
 
-    def getSetMaxTemperatureWater(self):
+    def _getSetMaxTemperatureWater(self):
         return str(int(self._data[StoveRegisters.INDEX_WATER_SET_MAX]) / 10)
 
-    def getSetMinTemperatureWater(self):
+    def _getSetMinTemperatureWater(self):
         return str(int(self._data[StoveRegisters.INDEX_WATER_SET_MIN]) / 10)
 
-    def getSmokeTemperature(self):
+    def _getSmokeTemperature(self):
         return str(int(self._data[StoveRegisters.INDEX_SMOKE_T]) / 10)
 
-    def getPowerLevel(self):
+    def _getPowerLevel(self):
         return self._data[StoveRegisters.INDEX_POWER_LEVEL]
 
-    def getSetPowerLevel(self):
+    def _getSetPowerLevel(self):
         return self._data[StoveRegisters.INDEX_POWER_SET]
 
-    def getSetMaxPowerLevel(self):
+    def _getSetMaxPowerLevel(self):
         return self._data[StoveRegisters.INDEX_POWER_MAX]
 
-    def getSetMinPowerLevel(self):
+    def _getSetMinPowerLevel(self):
         return self._data[StoveRegisters.INDEX_POWER_MIN]
 
-    def getSpeedFanSmoke(self):
+    def _getSpeedFanSmoke(self):
         return self._data[StoveRegisters.INDEX_FAN_SMOKE]
 
-    def getSpeedFan1(self):
+    def _getSpeedFan1(self):
         return self._data[StoveRegisters.INDEX_FAN_1]
 
-    def getSetSpeedFan1(self):
+    def _getSetSpeedFan1(self):
         return self._data[StoveRegisters.INDEX_FAN_1_SET]
 
-    def getSetMaxSpeedFan1(self):
+    def _getSetMaxSpeedFan1(self):
         return self._data[StoveRegisters.INDEX_FAN_1_SET_MAX]
 
-    def getSpeedFan2(self):
+    def _getSpeedFan2(self):
         return self._data[StoveRegisters.INDEX_FAN_2]
 
-    def getSetSpeedFan2(self):
+    def _getSetSpeedFan2(self):
         return self._data[StoveRegisters.INDEX_FAN_2_SET]
 
-    def getSetMaxSpeedFan2(self):
+    def _getSetMaxSpeedFan2(self):
         return self._data[StoveRegisters.INDEX_FAN_2_SET_MAX]
 
-    def getSpeedFan3(self):
+    def _getSpeedFan3(self):
         return self._data[StoveRegisters.INDEX_FAN_3]
 
-    def getSetSpeedFan3(self):
+    def _getSetSpeedFan3(self):
         return self._data[StoveRegisters.INDEX_FAN_3_SET]
 
-    def getSetMaxSpeedFan3(self):
+    def _getSetMaxSpeedFan3(self):
         return self._data[StoveRegisters.INDEX_FAN_3_SET_MAX]

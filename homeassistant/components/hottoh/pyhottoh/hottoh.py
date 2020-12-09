@@ -1,13 +1,7 @@
 # coding: utf-8
 
 import asyncio
-import socket
-import getmac
 from .request import Request
-from .const import *
-from .stove import Stove
-from .chrono import Chrono
-from .boiler import Boiler
 
 
 class Hottoh:
@@ -15,68 +9,72 @@ class Hottoh:
         """Communicate with HottoH stove wifi module"""
         self.port = port
         self.ip = ip
-        self._stove = None
-        self._boiler = None
+        self._data = None
         self._chrono = None
-        self._buffsize = 2048
-        self.Boiler = Boiler(self._boiler)
-        self.Stove = Stove(self._stove)
-        self.Chrono = Chrono(self._chrono)
-        self.mac = getmac.get_mac_address(ip=self.ip)
-        self.refreshData()
-        self.name = "Hottoh"
-        self.sw_version = "1.0.0"
-        self.manufacturer = "CMG"
-        self.model = "Drum"
+        self._info = None
+        self._buffsize = 1024
 
     async def test_connection(self):
         """Test connectivity with the stove."""
-        request = Request(parameters=["0"])
+        data = await self._fetch(command="DAT", parameters=["0"])
+        if len(data) > 0:
+            return True
+        else:
+            return False
+
+    def _extractData(self, data):
+        # Split data to an array
+        return data.split(";")
+
+    async def _fetch(self, command, parameters):
+        """Get data from the stove"""
+        request = Request(command=command, parameters=parameters)
         reader, writer = await asyncio.open_connection(self.ip, self.port)
         writer.write(request.getRequest())
         await writer.drain()
         data = await reader.read(self._buffsize)
         writer.close()
         await writer.wait_closed()
-        if len(data) > 0:
-            return True
-        else:
-            return False
 
-    def getMacAddress(self):
-        if self.mac != None:
-            return self.mac
-        else:
-            return ""
+        return self._extractData(f"{data}")
 
-    def refreshData(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(5)
-        s.connect((self.ip, self.port))
+    def _getMac(self):
+        return "aabbccddeeff"
 
-        ## Get Stove Data ##
-        request = Request(parameters=["0"])
-        s.send(request.getRequest())
-        temp = s.recv(self._buffsize)
-        self._stove = self._extractData(str(temp))
+    # def refreshData(self):
+    #     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #     s.settimeout(5)
+    #     s.connect((self.ip, self.port))
 
-        ## Get Chrono data ##
-        request = Request(parameters=["1"])
-        s.send(request.getRequest())
-        temp = s.recv(self._buffsize)
-        self._chrono = self._extractData(str(temp))
+    #     ## Get Stove Data ##
+    #     request = Request(command="INF", parameters=[""])
+    #     s.send(request.getRequest())
+    #     temp = s.recv(self._buffsize)
+    #     self._inf = self._extractData(str(temp))
 
-        ## Get Boiler Data ##
-        request = Request(parameters=["2"])
-        s.send(request.getRequest())
-        temp = s.recv(self._buffsize)
-        self._boiler = self._extractData(str(temp))
+    #     ## Get Stove Data ##
+    #     request = Request(parameters=["0"])
+    #     s.send(request.getRequest())
+    #     temp = s.recv(self._buffsize)
+    #     self._stove = self._extractData(str(temp))
 
-        s.close()
+    #     ## Get Chrono data ##
+    #     request = Request(parameters=["1"])
+    #     s.send(request.getRequest())
+    #     temp = s.recv(self._buffsize)
+    #     self._chrono = self._extractData(str(temp))
 
-        self.Boiler = Boiler(self._boiler)
-        self.Stove = Stove(self._stove)
-        self.Chrono = Chrono(self._chrono)
+    #     ## Get Boiler Data ##
+    #     request = Request(parameters=["2"])
+    #     s.send(request.getRequest())
+    #     temp = s.recv(self._buffsize)
+    #     self._boiler = self._extractData(str(temp))
+
+    #     s.close()
+
+    #     self.Boiler = Boiler(self._boiler)
+    #     self.Stove = Stove(self._stove)
+    #     self.Chrono = Chrono(self._chrono)
 
     # def toJson(self):
     #     self.Stove = Stove(self._stove)
@@ -86,7 +84,3 @@ class Hottoh:
     #         self.Stove.toJson(), self.Chrono.toJson(), self.Boiler.toJson()
     #     )
     #     return "{" + j + "}"
-
-    def _extractData(self, data):
-        # Split data to an array
-        return data.split(";")

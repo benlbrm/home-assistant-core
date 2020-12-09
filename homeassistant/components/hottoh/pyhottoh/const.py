@@ -38,6 +38,10 @@ class StoveManufacturer(IntEnum):
 
 
 class StoveRegisters(IntEnum):
+    ## Infos ##
+    INDEX_FW = 1
+    INDEX_WIFI = 2
+
     ## Data 0 ##
     INDEX_PAGE = 0
     INDEX_MANUFACTURER = 1

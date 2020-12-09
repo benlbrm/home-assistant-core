@@ -1,4 +1,4 @@
 from .request import *
-from .hottoh import *
+from .stove import *
 
 __version__ = "0.0.1"

@@ -12,20 +12,23 @@ class CommandMode(Enum):
     EXECUTE = "E"
 
 
-class Request:
+IdSocket = 0
 
-    def __init__(self, command="DAT", mode="R", parameters=['0']):
+
+class Request:
+    def __init__(self, command="DAT", mode="R", parameters=["0"], id=0):
         """Generate communication frame"""
         self.command = command
         self.mode = mode
         self.parameters = parameters
-        self.socketId = 1
+        self.id = id
+        # self.socketId = 1
         self.request = ""
         self._buildRawPacket()
 
     def _buildRawPacket(self):
         """Buld raw packet from data"""
-        strSocketId = str(self.socketId).zfill(5)
+        strSocketId = str(self.id).zfill(5)
         strRawData = self._getRawData()
         strData = strSocketId + "A---" + strRawData
         strCrc = self._getCrc(strData)
@@ -44,9 +47,9 @@ class Request:
         return str1
 
     def _getCrc(self, message):
-        crc16 = crcmod.predefined.Crc('crc-ccitt-false')
-        crc16.update(message.encode('utf-8'))
+        crc16 = crcmod.predefined.Crc("crc-ccitt-false")
+        crc16.update(message.encode("utf-8"))
         return crc16.hexdigest()
 
     def getRequest(self):
-        return self.request.encode('utf-8')
+        return self.request.encode("utf-8")
